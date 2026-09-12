@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  googleId  String   @unique
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  books     Book[]
+}
+
+model Book {
+  id         String           @id @default(uuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  title      String
+  author     String?
+  format     String // "epub" | "pdf"
+  s3Key      String
+  uploadedAt DateTime         @default(now())
+  progress   ReadingProgress?
+}
+
+// One row per book - a book only ever has one owner, so bookId alone is
+// enough to key this without a separate userId column.
+model ReadingProgress {
+  bookId    String   @id
+  book      Book     @relation(fields: [bookId], references: [id])
+  location  String
+  updatedAt DateTime @updatedAt
+}
