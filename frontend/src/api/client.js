@@ -1,11 +1,12 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/+$/, "");
 
 async function request(path, { method = "GET", body, token, isFormData = false } = {}) {
   const headers = {};
   if (!isFormData) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const normalizedPath = `/${path.replace(/^\/+/, "")}`;
+  const res = await fetch(`${API_URL}${normalizedPath}`, {
     method,
     headers,
     body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
