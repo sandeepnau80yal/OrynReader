@@ -72,6 +72,7 @@ export function useEpubReader(containerRef, fileUrl, theme, { initialLocation, o
   const renditionRef = useRef(null);
   const hasDisplayedInitial = useRef(false);
   const lastCfiRef = useRef(null);
+  const locationsReadyRef = useRef(false);
 
   const [toc, setToc] = useState([]);
   const [metadata, setMetadata] = useState({ title: "", creator: "", publisher: "", language: "" });
@@ -90,6 +91,7 @@ export function useEpubReader(containerRef, fileUrl, theme, { initialLocation, o
 
     hasDisplayedInitial.current = false;
     lastCfiRef.current = null;
+    locationsReadyRef.current = false;
     setLoading(true);
     setRenditionReady(false);
     setToc([]);
@@ -120,7 +122,7 @@ export function useEpubReader(containerRef, fileUrl, theme, { initialLocation, o
       setPageInfo({ current: location.start.displayed.page, total: location.start.displayed.total });
       setActiveChapterHref(location.start.href);
       lastCfiRef.current = location.start.cfi;
-      const percentage = book.locations.length()
+      const percentage = locationsReadyRef.current && book.locations.length()
         ? book.locations.percentageFromCfi(location.start.cfi)
         : null;
       onRelocated?.(location.start.cfi, percentage);
@@ -156,6 +158,7 @@ export function useEpubReader(containerRef, fileUrl, theme, { initialLocation, o
     });
 
     book.locations.generate(1000).then(() => {
+      locationsReadyRef.current = true;
       if (lastCfiRef.current) {
         onRelocated?.(
           lastCfiRef.current,

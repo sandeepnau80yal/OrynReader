@@ -15,7 +15,7 @@ router.get("/", asyncHandler(async (req, res) => {
   res.json(await Promise.all(books.map(async (book) => ({
     ...book,
     coverUrl: book.coverS3Key ? await getReadUrl(book.coverS3Key) : null,
-    progressPercentage: book.progress?.percentage || 0,
+    progressPercentage: Math.round((book.progress?.percentage || 0) * 100),
     progress: undefined,
   }))));
 }));
