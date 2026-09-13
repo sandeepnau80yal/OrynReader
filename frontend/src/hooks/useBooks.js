@@ -7,8 +7,11 @@ import { useAuth } from "../context/AuthContext";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-async function getPdfThumbnail(url) {
-  const loadingTask = pdfjsLib.getDocument({ url });
+async function getPdfThumbnail(source) {
+  const data = typeof source === "string" || source instanceof URL
+    ? { url: source.toString() }
+    : { data: await source.arrayBuffer() };
+  const loadingTask = pdfjsLib.getDocument(data);
   const pdf = await loadingTask.promise;
   const page = await pdf.getPage(1);
   const viewport = page.getViewport({ scale: 0.5 });
@@ -19,6 +22,7 @@ async function getPdfThumbnail(url) {
   const thumbnail = canvas.toDataURL("image/jpeg", 0.82);
   page.cleanup();
   await pdf.cleanup?.();
+  await loadingTask.destroy();
   return thumbnail;
 }
 
