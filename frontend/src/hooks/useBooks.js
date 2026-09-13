@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import ePub from "epubjs";
-import JSZip from "jszip";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfjsWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { getBooks, getReadUrl, getUploadUrl, createBook, deleteBook } from "../api/books";
@@ -22,59 +21,6 @@ async function getPdfThumbnail(url) {
   page.cleanup();
   await pdf.cleanup?.();
   return thumbnail;
-}
-
-function resolveZipPath(basePath, relativePath) {
-  const parts = `${basePath}/${relativePath}`.split("/");
-  const resolved = [];
-  for (const part of parts) {
-    if (!part || part === ".") continue;
-    if (part === "..") resolved.pop();
-    else resolved.push(part);
-  }
-  return resolved.join("/");
-}
-
-async function getEpubCover(url) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Could not download EPUB: ${response.status}`);
-
-  const zip = await JSZip.loadAsync(await response.arrayBuffer());
-  const containerEntry = zip.file("META-INF/container.xml");
-  if (!containerEntry) return null;
-
-  const container = new DOMParser().parseFromString(await containerEntry.async("text"), "application/xml");
-  const rootfile = container.querySelector("rootfile[full-path]");
-  const opfPath = rootfile?.getAttribute("full-path");
-  if (!opfPath) return null;
-
-  const opfEntry = zip.file(opfPath);
-  if (!opfEntry) return null;
-  const opf = new DOMParser().parseFromString(await opfEntry.async("text"), "application/xml");
-  const manifestItems = [...opf.querySelectorAll("manifest item")];
-  const coverItem = manifestItems.find((item) =>
-    item.getAttribute("properties")?.split(/\s+/).includes("cover-image")
-  ) || manifestItems.find((item) => item.getAttribute("id") ===
-    opf.querySelector('metadata meta[name="cover"]')?.getAttribute("content"));
-
-  const coverHref = coverItem?.getAttribute("href");
-  if (!coverHref) return null;
-
-  const coverEntry = zip.file(resolveZipPath(opfPath.split("/").slice(0, -1).join("/"), coverHref));
-  if (!coverEntry) return null;
-  const blob = await coverEntry.async("blob");
-  return URL.createObjectURL(blob);
-}
-
-async function getBookCover(book, token) {
-  try {
-    const { url } = await getReadUrl(token, book.id);
-    if (book.format === "epub") return await getEpubCover(url);
-    return await getPdfThumbnail(url);
-  } catch (error) {
-    console.warn(`Could not load cover for ${book.title}:`, error);
-    return null;
-  }
 }
 
 async function getBookProgress(book, token) {
@@ -135,15 +81,12 @@ export function useBooks() {
     setError(null);
     try {
       const library = await getBooks(token);
-      setBooks(library);
-      const withCovers = await Promise.all(
+      setBooks(await Promise.all(
         library.map(async (book) => ({
           ...book,
-          coverUrl: await getBookCover(book, token),
           progressPercentage: await getBookProgress(book, token),
         }))
-      );
-      setBooks(withCovers);
+      ));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -168,7 +111,11 @@ export function useBooks() {
       try {
         const metadata = isEpub
           ? await extractEpubMetadata(file)
-          : { title: file.name.replace(/\.pdf$/i, ""), author: "Unknown author", coverUrl: null };
+          : {
+            title: file.name.replace(/\.pdf$/i, ""),
+            author: "Unknown author",
+            coverUrl: await getPdfThumbnail(file),
+          };
 
         const duplicate = books.some(
           (book) => book.format === (isEpub ? "epub" : "pdf")
@@ -182,12 +129,25 @@ export function useBooks() {
         const { uploadUrl, key } = await getUploadUrl(token, file.name, file.type);
         await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
 
+        let coverS3Key = null;
+        if (metadata.coverUrl) {
+          const coverBlob = await fetch(metadata.coverUrl).then((response) => response.blob());
+          const coverUpload = await getUploadUrl(token, `${file.name}.cover.jpg`, "image/jpeg");
+          await fetch(coverUpload.uploadUrl, {
+            method: "PUT",
+            body: coverBlob,
+            headers: { "Content-Type": "image/jpeg" },
+          });
+          coverS3Key = coverUpload.key;
+        }
+
         // Only after the S3 upload succeeds do we persist metadata to Postgres.
         const saved = await createBook(token, {
           title: metadata.title,
           author: metadata.author,
           format: isEpub ? "epub" : "pdf",
           s3Key: key,
+          coverS3Key,
         });
 
         setBooks((prev) => [...prev, { ...saved, coverUrl: metadata.coverUrl }]);

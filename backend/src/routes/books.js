@@ -9,7 +9,10 @@ router.use(verifyJwt);
 
 router.get("/", asyncHandler(async (req, res) => {
   const books = await prisma.book.findMany({ where: { userId: req.user.id } });
-  res.json(books);
+  res.json(await Promise.all(books.map(async (book) => ({
+    ...book,
+    coverUrl: book.coverS3Key ? await getReadUrl(book.coverS3Key) : null,
+  }))));
 }));
 
 router.post("/upload-url", asyncHandler(async (req, res) => {
@@ -20,9 +23,9 @@ router.post("/upload-url", asyncHandler(async (req, res) => {
 }));
 
 router.post("/", asyncHandler(async (req, res) => {
-  const { title, author, format, s3Key } = req.body;
+  const { title, author, format, s3Key, coverS3Key } = req.body;
   const book = await prisma.book.create({
-    data: { userId: req.user.id, title, author, format, s3Key },
+    data: { userId: req.user.id, title, author, format, s3Key, coverS3Key: coverS3Key || null },
   });
   res.status(201).json(book);
 }));
@@ -40,6 +43,7 @@ router.delete("/:id", asyncHandler(async (req, res) => {
   const book = await prisma.book.findFirst({ where: { id: req.params.id, userId: req.user.id } });
   if (!book) return res.status(404).json({ message: "Book not found" });
   await deleteObject(book.s3Key);
+  if (book.coverS3Key) await deleteObject(book.coverS3Key);
   await prisma.book.delete({ where: { id: book.id } });
   res.status(204).end();
 }));

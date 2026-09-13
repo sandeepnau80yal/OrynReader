@@ -17,6 +17,7 @@ CREATE TABLE "Book" (
     "author" TEXT,
     "format" TEXT NOT NULL,
     "s3Key" TEXT NOT NULL,
+    "coverS3Key" TEXT,
     "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Book_pkey" PRIMARY KEY ("id")

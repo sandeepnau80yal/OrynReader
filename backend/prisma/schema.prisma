@@ -23,6 +23,7 @@ model Book {
   author     String?
   format     String // "epub" | "pdf"
   s3Key      String
+  coverS3Key String?
   uploadedAt DateTime         @default(now())
   progress   ReadingProgress?
 }
