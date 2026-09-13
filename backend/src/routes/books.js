@@ -8,10 +8,15 @@ const router = Router();
 router.use(verifyJwt);
 
 router.get("/", asyncHandler(async (req, res) => {
-  const books = await prisma.book.findMany({ where: { userId: req.user.id } });
+  const books = await prisma.book.findMany({
+    where: { userId: req.user.id },
+    include: { progress: true },
+  });
   res.json(await Promise.all(books.map(async (book) => ({
     ...book,
     coverUrl: book.coverS3Key ? await getReadUrl(book.coverS3Key) : null,
+    progressPercentage: book.progress?.percentage || 0,
+    progress: undefined,
   }))));
 }));
 
@@ -57,14 +62,14 @@ router.get("/:id/progress", asyncHandler(async (req, res) => {
 }));
 
 router.put("/:id/progress", asyncHandler(async (req, res) => {
-  const { location } = req.body;
+  const { location, percentage = 0 } = req.body;
   const book = await prisma.book.findFirst({ where: { id: req.params.id, userId: req.user.id } });
   if (!book) return res.status(404).json({ message: "Book not found" });
 
   const progress = await prisma.readingProgress.upsert({
     where: { bookId: book.id },
-    update: { location },
-    create: { bookId: book.id, location },
+    update: { location, percentage },
+    create: { bookId: book.id, location, percentage },
   });
   res.json(progress);
 }));

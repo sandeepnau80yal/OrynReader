@@ -120,20 +120,15 @@ export function useEpubReader(containerRef, fileUrl, theme, { initialLocation, o
       setPageInfo({ current: location.start.displayed.page, total: location.start.displayed.total });
       setActiveChapterHref(location.start.href);
       lastCfiRef.current = location.start.cfi;
-      onRelocated?.(location.start.cfi);
+      const percentage = book.locations.length()
+        ? book.locations.percentageFromCfi(location.start.cfi)
+        : null;
+      onRelocated?.(location.start.cfi, percentage);
     });
 
     rendition.on("rendered", (_section, view) => {
       const document = view?.contents?.document;
       if (document) {
-        [...document.querySelectorAll("style")].forEach((style) => {
-          style.textContent = style.textContent
-            .replace(/@font-face\s*\{[^}]*\}/gi, "")
-            .replace(/font-family\s*:[^;]+;?/gi, "");
-        });
-        [...document.querySelectorAll('link[rel="stylesheet"]')].forEach((link) => {
-          link.media = "not all";
-        });
         let fontOverride = document.getElementById("oryn-reader-font-override");
         if (!fontOverride) {
           fontOverride = document.createElement("style");
@@ -158,6 +153,17 @@ export function useEpubReader(containerRef, fileUrl, theme, { initialLocation, o
         publisher: bookMetadata.publisher || "",
         language: bookMetadata.language || "",
       });
+    });
+
+    book.locations.generate(1000).then(() => {
+      if (lastCfiRef.current) {
+        onRelocated?.(
+          lastCfiRef.current,
+          book.locations.percentageFromCfi(lastCfiRef.current)
+        );
+      }
+    }).catch((error) => {
+      console.warn("Could not generate EPUB locations:", error);
     });
 
     setReady(true);

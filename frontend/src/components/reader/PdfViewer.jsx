@@ -157,7 +157,7 @@ export default function PdfViewer({ fileUrl, initialLocation, onRelocated }) {
 
   useEffect(() => {
     if (pdfRef.current && numPages && onRelocated) {
-      onRelocated(`pdf:${pageNum}`);
+      onRelocated(`pdf:${pageNum}`, pageNum / numPages);
     }
   }, [pageNum, numPages, onRelocated]);
 

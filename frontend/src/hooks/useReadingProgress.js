@@ -21,10 +21,10 @@ export function useReadingProgress(bookId) {
 
   // Debounced so a fast page-turner doesn't fire a request per page.
   const onRelocated = useCallback(
-    (location) => {
+    (location, percentage) => {
       clearTimeout(saveTimeout.current);
       saveTimeout.current = setTimeout(() => {
-        saveProgress(token, bookId, location).catch((err) =>
+      saveProgress(token, bookId, location, percentage).catch((err) =>
           console.error("Failed to save reading progress:", err)
         );
       }, 1000);

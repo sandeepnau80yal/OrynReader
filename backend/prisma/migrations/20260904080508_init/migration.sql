@@ -27,6 +27,7 @@ CREATE TABLE "Book" (
 CREATE TABLE "ReadingProgress" (
     "bookId" TEXT NOT NULL,
     "location" TEXT NOT NULL,
+    "percentage" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "ReadingProgress_pkey" PRIMARY KEY ("bookId")

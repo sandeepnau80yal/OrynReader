@@ -4,5 +4,9 @@ import request from "./client";
 export const getProgress = (token, bookId) =>
   request(`/books/${bookId}/progress`, { token }).catch(() => null);
 
-export const saveProgress = (token, bookId, location) =>
-  request(`/books/${bookId}/progress`, { method: "PUT", token, body: { location } });
+export const saveProgress = (token, bookId, location, percentage) =>
+  request(`/books/${bookId}/progress`, {
+    method: "PUT",
+    token,
+    body: { location, percentage },
+  });

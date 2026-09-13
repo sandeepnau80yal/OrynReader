@@ -34,5 +34,6 @@ model ReadingProgress {
   bookId    String   @id
   book      Book     @relation(fields: [bookId], references: [id])
   location  String
+  percentage Float    @default(0)
   updatedAt DateTime @updatedAt
 }
