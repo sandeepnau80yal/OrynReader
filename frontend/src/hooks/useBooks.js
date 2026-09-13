@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import ePub from "epubjs";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfjsWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
-import { getBooks, getReadUrl, getUploadUrl, createBook, deleteBook } from "../api/books";
-import { getProgress } from "../api/progress";
+import { getBooks, getUploadUrl, createBook, deleteBook } from "../api/books";
 import { useAuth } from "../context/AuthContext";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -21,32 +20,6 @@ async function getPdfThumbnail(url) {
   page.cleanup();
   await pdf.cleanup?.();
   return thumbnail;
-}
-
-async function getBookProgress(book, token) {
-  try {
-    const progress = await getProgress(token, book.id);
-    if (!progress?.location) return 0;
-
-    const { url } = await getReadUrl(token, book.id);
-    if (book.format === "pdf") {
-      const pageNumber = Number(progress.location.replace("pdf:", ""));
-      const loadingTask = pdfjsLib.getDocument({ url });
-      const pdf = await loadingTask.promise;
-      await loadingTask.destroy();
-      return Math.round((Math.max(1, Math.min(pdf.numPages, pageNumber)) / pdf.numPages) * 100);
-    }
-
-    const epub = ePub(url);
-    await epub.ready;
-    await epub.locations.generate(1000);
-    const percentage = epub.locations.percentageFromCfi(progress.location);
-    epub.destroy?.();
-    return Math.round(Math.max(0, Math.min(1, percentage)) * 100);
-  } catch (error) {
-    console.warn(`Could not load progress for ${book.title}:`, error);
-    return 0;
-  }
 }
 
 // Same metadata extraction your handleEPUBUpload did, minus the full-book
@@ -81,12 +54,7 @@ export function useBooks() {
     setError(null);
     try {
       const library = await getBooks(token);
-      setBooks(await Promise.all(
-        library.map(async (book) => ({
-          ...book,
-          progressPercentage: await getBookProgress(book, token),
-        }))
-      ));
+      setBooks(library);
     } catch (err) {
       setError(err.message);
     } finally {
