@@ -47,12 +47,15 @@ export default function BookCard({ book, onDelete }) {
         {menuOpen && (
           <div className="book-menu">
             <button
-              onClick={() => {
+              onClick={async (event) => {
+                event.stopPropagation();
+                if (!window.confirm(`Delete "${book.title}" from your library?`)) return;
                 setMenuOpen(false);
-                onDelete(book.id);
+                await onDelete(book.id);
               }}
+              type="button"
             >
-              Delete
+              Delete {book.format?.toUpperCase()}
             </button>
           </div>
         )}

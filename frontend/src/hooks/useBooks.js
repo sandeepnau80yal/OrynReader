@@ -129,8 +129,13 @@ export function useBooks() {
 
   const removeBook = useCallback(
     async (bookId) => {
-      await deleteBook(token, bookId);
-      setBooks((prev) => prev.filter((b) => b.id !== bookId));
+      try {
+        setError(null);
+        await deleteBook(token, bookId);
+        setBooks((prev) => prev.filter((b) => b.id !== bookId));
+      } catch (err) {
+        setError(err.message);
+      }
     },
     [token]
   );

@@ -44,6 +44,7 @@ router.delete("/:id", asyncHandler(async (req, res) => {
   if (!book) return res.status(404).json({ message: "Book not found" });
   await deleteObject(book.s3Key);
   if (book.coverS3Key) await deleteObject(book.coverS3Key);
+  await prisma.readingProgress.deleteMany({ where: { bookId: book.id } });
   await prisma.book.delete({ where: { id: book.id } });
   res.status(204).end();
 }));
