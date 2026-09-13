@@ -95,7 +95,7 @@ export function useEpubReader(containerRef, fileUrl, theme, { initialLocation, o
     setToc([]);
     setMetadata({ title: "", creator: "", publisher: "", language: "" });
 
-    const book = ePub(fileUrl, { replacements: "none" });
+    const book = ePub(fileUrl, { replacements: "blobUrl" });
     const rendition = book.renderTo(containerRef.current, {
       width: "100%",
       height: "100%",
