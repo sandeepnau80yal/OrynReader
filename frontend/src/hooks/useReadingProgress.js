@@ -22,7 +22,6 @@ export function useReadingProgress(bookId) {
   // Debounced so a fast page-turner doesn't fire a request per page.
   const onRelocated = useCallback(
     (location, percentage) => {
-      if (!Number.isFinite(percentage)) return;
       clearTimeout(saveTimeout.current);
       saveTimeout.current = setTimeout(() => {
         saveProgress(token, bookId, location, percentage).catch((err) =>

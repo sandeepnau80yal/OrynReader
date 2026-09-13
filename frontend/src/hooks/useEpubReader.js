@@ -122,10 +122,14 @@ export function useEpubReader(containerRef, fileUrl, theme, { initialLocation, o
       setPageInfo({ current: location.start.displayed.page, total: location.start.displayed.total });
       setActiveChapterHref(location.start.href);
       lastCfiRef.current = location.start.cfi;
-      const percentage = locationsReadyRef.current && book.locations.length()
+      const generatedPercentage = locationsReadyRef.current && book.locations.length()
         ? book.locations.percentageFromCfi(location.start.cfi)
         : null;
-      onRelocated?.(location.start.cfi, percentage);
+      const displayed = location.start.displayed;
+      const fallbackPercentage = displayed?.total
+        ? displayed.page / displayed.total
+        : 0;
+      onRelocated?.(location.start.cfi, generatedPercentage ?? fallbackPercentage);
     });
 
     rendition.on("rendered", (_section, view) => {

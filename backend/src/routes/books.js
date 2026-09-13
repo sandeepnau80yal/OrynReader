@@ -66,17 +66,24 @@ router.put("/:id/progress", asyncHandler(async (req, res) => {
   const book = await prisma.book.findFirst({ where: { id: req.params.id, userId: req.user.id } });
   if (!book) return res.status(404).json({ message: "Book not found" });
 
+  const hasPercentage = percentage !== null
+    && percentage !== undefined
+    && Number.isFinite(Number(percentage));
   const numericPercentage = Number(percentage);
-  const normalizedPercentage = Number.isFinite(numericPercentage)
+  const normalizedPercentage = hasPercentage
     ? Math.max(0, Math.min(1, numericPercentage))
-    : 0;
+    : null;
+
+  const existingProgress = hasPercentage
+    ? null
+    : await prisma.readingProgress.findUnique({ where: { bookId: book.id } });
 
   const progress = await prisma.readingProgress.upsert({
     where: { bookId: book.id },
-    update: { location, percentage: normalizedPercentage },
+    update: { location, ...(normalizedPercentage === null ? {} : { percentage: normalizedPercentage }) },
     create: {
       location,
-      percentage: normalizedPercentage,
+      percentage: normalizedPercentage ?? existingProgress?.percentage ?? 0,
       book: { connect: { id: book.id } },
     },
   });
