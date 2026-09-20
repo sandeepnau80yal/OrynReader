@@ -115,7 +115,21 @@ export function useEpubReader(containerRef, fileUrl, theme, { initialLocation, o
     // highlighted text and its cfi whenever text is selected inside the iframe.
     rendition.on("selected", (cfiRange, contents) => {
       const text = contents.window.getSelection().toString().trim();
-      if (text) setSelection({ text, cfi: cfiRange });
+      if (!text) return;
+
+      const range = contents.window.getSelection().rangeCount
+        ? contents.window.getSelection().getRangeAt(0).getBoundingClientRect()
+        : null;
+      const frame = contents.window.frameElement?.getBoundingClientRect();
+      const anchor = range && frame
+        ? {
+          left: Math.max(16, Math.min(window.innerWidth - 16, frame.left + range.left + range.width / 2)),
+          top: frame.top + range.bottom + 12,
+          above: frame.top + range.bottom + 180 > window.innerHeight,
+        }
+        : null;
+
+      setSelection({ text, cfi: cfiRange, anchor });
     });
 
     rendition.on("relocated", (location) => {
